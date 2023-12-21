@@ -1996,23 +1996,13 @@ void AllToAllOp::build(OpBuilder& odsBuilder, OperationState& odsState,
 // AllGatherOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult AllGatherOp::verify() {
-  int64_t channelId = 0;
-  if (auto channelHandleAttr = getChannelHandleAttr())
-    channelId = channelHandleAttr.getHandle();
-
-  return hlo::verifyAllGatherOp(getLoc(), getOperand(), getAllGatherDim(),
-                                getReplicaGroups(), channelId,
-                                getUseGlobalDeviceIds(), getResult());
-}
-
 void AllGatherOp::build(OpBuilder& odsBuilder, OperationState& odsState,
                         Type resultType, Value operand,
                         IntegerAttr allGatherDim,
                         DenseIntElementsAttr replicaGroups,
                         ChannelHandleAttr channelHandle) {
-  AllGatherOp::build(odsBuilder, odsState, resultType, operand, allGatherDim,
-                     replicaGroups, channelHandle,
+  AllGatherOp::build(odsBuilder, odsState, resultType, ValueRange(operand),
+                     allGatherDim, replicaGroups, channelHandle,
                      /*use_global_device_ids=*/nullptr);
 }
 

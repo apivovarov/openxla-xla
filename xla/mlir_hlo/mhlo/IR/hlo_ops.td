@@ -1451,7 +1451,10 @@ def MHLO_WhileOp: MHLO_Op<"while", [
   let hasVerifier = 1;
 }
 
-def MHLO_AllGatherOp : MHLO_Op<"all_gather", [SameOperandsAndResultElementType]> {
+def MHLO_AllGatherOp : MHLO_Op<"all_gather", [
+    SameOperandsAndResultElementType,
+    SingleBlockImplicitTerminator<"ReturnOp">
+  ]> {
   string summary = "AllGather operation";
   string description = [{
     Within each process group in the process grid, concatenates the values of the
@@ -1474,13 +1477,13 @@ def MHLO_AllGatherOp : MHLO_Op<"all_gather", [SameOperandsAndResultElementType]>
   }];
 
   let arguments = (ins
-    MHLO_Tensor:$operand,
+    Variadic<MHLO_Tensor>:$operands,
     I64Attr:$all_gather_dim,
     I64ElementsAttr:$replica_groups,
     OptionalAttr<MHLO_ChannelHandle>:$channel_handle,
     UnitAttr:$use_global_device_ids
   );
-  let results = (outs MHLO_Tensor);
+  let results = (outs Variadic<MHLO_Tensor>);
   // use_global_device_ids is rarely used, so we add simplified builder methods
   // for convenience.
   let builders = [
@@ -1491,7 +1494,6 @@ def MHLO_AllGatherOp : MHLO_Op<"all_gather", [SameOperandsAndResultElementType]>
       "::mlir::mhlo::ChannelHandleAttr":$channel_handle)>];
 
   let hasCustomHLOConverter = 1;
-  let hasVerifier = 1;
 }
 
 def MHLO_AllReduceOp : MHLO_Op<"all_reduce", [
