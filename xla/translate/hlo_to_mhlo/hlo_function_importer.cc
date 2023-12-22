@@ -428,8 +428,9 @@ StatusOr<FuncOp> HloFunctionImporter::ImportAsFunc(
 
   // Construct the MLIR function and map arguments.
   llvm::ArrayRef<mlir::NamedAttribute> attrs;
-  auto function = FuncOp::create(mlir::UnknownLoc::get(context_),
-                                 computation_name, func_type, attrs);
+  std::string function_loc_str = "mlir.function{hlo_id=" + std::to_string(computation.unique_id()) + "}";
+  auto function = mlir::func::FuncOp::create(mlir::NameLoc::get(builder_->getStringAttr(function_loc_str)),
+                                            computation_name, func_type, attrs);
   auto visibility = computation_name == "main" ? FuncOp::Visibility::Public
                                                : FuncOp::Visibility::Private;
   function.setVisibility(visibility);
@@ -556,7 +557,16 @@ StatusOr<Value> HloFunctionImporter::ImportInstructionsImpl(
     instruction_value_map_[hlo_parameter] = arguments[i];
   }
 
-  for (auto instruction : computation.MakeInstructionPostOrder()) {
+  std::vector<HloInstruction *> instructions;
+  if (computation.parent()->has_schedule()) {
+    HloSchedule schedule = computation.parent()->schedule();
+    TF_RETURN_IF_ERROR(schedule.Update());
+    instructions = schedule.sequence(&computation).instructions();
+  } else {
+    instructions = computation.MakeInstructionPostOrder();
+  }
+
+  for (auto instruction : instructions) {
     TF_ASSIGN_OR_RETURN(auto operands, GetOperands(instruction));
     TF_ASSIGN_OR_RETURN(
         auto new_operation,
@@ -577,7 +587,8 @@ Status HloFunctionImporter::ImportInstructions(
   mlir::OpBuilder builder = mlir::OpBuilder::atBlockEnd(block);
 
   // TODO(suderman): Add location tracking details.
-  mlir::Location loc = builder.getUnknownLoc();
+  std::string loc_str = "mlir.instruction{hlo_id=" + std::to_string(computation.unique_id()) + "}";
+  mlir::Location loc = mlir::NameLoc::get(builder_->getStringAttr(loc_str));
 
   Value result;
   if (!llvm::isa<FuncOp>(block->getParentOp()) && flatten_region_arg_tuple) {

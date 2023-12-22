@@ -31,8 +31,9 @@ mlir::Location GenerateInstructionLocation(
 
   const std::string& op_name = instruction->metadata().op_name();
   if (op_name.empty()) {
-    return mlir::NameLoc::get(b.getStringAttr(instruction->name()));
+    return mlir::NameLoc::get(b.getStringAttr(absl::StrCat(instruction->name(), "{hlo_id=", instruction->unique_id(), "}")));
   }
+  const std::string& op_name_id = op_name + "{hlo_id=" + std::to_string(instruction->unique_id()) + "}";
 
   if (instruction->metadata().stack_frame_id() != 0) {
     mlir::Location frame_location =
@@ -40,11 +41,11 @@ mlir::Location GenerateInstructionLocation(
                                   instruction->parent()->parent());
 
     if (!isa<mlir::UnknownLoc>(frame_location)) {
-      return mlir::NameLoc::get(b.getStringAttr(op_name), frame_location);
+      return mlir::NameLoc::get(b.getStringAttr(op_name_id), frame_location);
     }
   }
 
-  mlir::Location op_name_loc = mlir::NameLoc::get(b.getStringAttr(op_name));
+  mlir::Location op_name_loc = mlir::NameLoc::get(b.getStringAttr(op_name_id));
   const std::string& source_file = instruction->metadata().source_file();
   if (source_file.empty()) {
     return op_name_loc;
