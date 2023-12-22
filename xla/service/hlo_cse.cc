@@ -95,7 +95,7 @@ StatusOr<bool> CombineConstants(HloComputation* computation) {
       }
     }
 
-    if (match != nullptr) {
+    if (match != nullptr && computation->IsSafelyRemovable(instruction)) {
       // Match found, replace this instruction with the one in the set.
       TF_CHECK_OK(instruction->ReplaceAllUsesWith(match));
       TF_CHECK_OK(computation->RemoveInstruction(instruction));
@@ -271,6 +271,9 @@ StatusOr<bool> HloCSE::Run(
       }
       // Skip instructions which have side effects.
       if (instruction->HasSideEffect()) {
+        continue;
+      }
+      if (!computation->IsSafelyRemovable(instruction)) {
         continue;
       }
 

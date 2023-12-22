@@ -240,7 +240,9 @@ StatusOr<bool> HloConstantFolding::Run(
   for (HloInstruction* dead_instruction : dead_instructions) {
     CHECK(dead_instruction->IsDead());
     HloComputation* computation = dead_instruction->parent();
-    TF_RETURN_IF_ERROR(computation->RemoveInstruction(dead_instruction));
+    if (computation->IsSafelyRemovable(dead_instruction)) {
+      TF_RETURN_IF_ERROR(computation->RemoveInstruction(dead_instruction));
+    }
   }
   return changed;
 }
