@@ -31,6 +31,8 @@ package_group(
         "//third_party/py/tpu_graphs/...",
         "//tensorflow/compiler/...",
         "//tensorflow/python/tpu/...",
+        "//hilo/...",
+        "//warmup/...",
     ],
 )
 
