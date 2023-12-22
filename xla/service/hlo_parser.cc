@@ -2910,12 +2910,6 @@ HloInstruction* HloParserImpl::CreateInstruction(  // NOLINT
         return nullptr;
       }
 
-      if (api_version.has_value() &&
-          *api_version == CustomCallApiVersion::API_VERSION_UNSPECIFIED) {
-        TokenError(StrCat("Invalid API version: ",
-                          CustomCallApiVersion_Name(*api_version)));
-        return nullptr;
-      }
       if (operand_layout_constraints.has_value()) {
         if (!LayoutUtil::HasLayout(*shape)) {
           TokenError("Layout must be set on layout-constrained custom call");
