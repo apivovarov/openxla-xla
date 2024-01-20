@@ -2287,6 +2287,11 @@ ShapeInference::InferElementwiseBinaryOpShape(
   std::vector<Shape> output_shapes;
   output_shapes.reserve(operand_shapes.size());
   for (const Shape* operand_shape : operand_shapes) {
+    // Do not change output shape for scalar inputs
+    if (operand_shape->rank() == 0) {
+      output_shapes.push_back(*operand_shape);
+      continue;
+    }
     TF_RET_CHECK(all_gather_dimension < operand_shape->rank());
     TF_RETURN_IF_ERROR(ExpectArray(*operand_shape, "operand of all-gather"));
 
