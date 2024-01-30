@@ -25,3 +25,23 @@ xla_workspace1()
 load(":workspace0.bzl", "xla_workspace0")
 
 xla_workspace0()
+
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+http_archive(
+    name = "nlohmann_json",
+    url = "https://github.com/nlohmann/json/archive/v3.11.3.tar.gz",
+    strip_prefix = "json-3.11.3"
+)
+
+http_archive(
+    name = "oneTBB",
+    url = "https://github.com/oneapi-src/oneTBB/archive/v2021.11.0.tar.gz",
+    strip_prefix = "oneTBB-2021.11.0"
+)
+
+new_local_repository(
+    name = "amazon",
+    path = "/opt/amazon",
+    build_file = "hilo/BUILD.amazon",
+)
