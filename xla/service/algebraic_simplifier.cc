@@ -7123,13 +7123,20 @@ Status AlgebraicSimplifierVisitor::HandleReduce(HloInstruction* hlo) {
         new_reduce_dims.push_back(matching_dim_it->first);
       }
 
-      TF_ASSIGN_OR_RETURN(
-          HloInstruction * new_reduce,
-          MakeReduceHlo(arg->mutable_operand(0), init_value, new_reduce_dims,
-                        reduce->to_apply(), &reduce->metadata()));
-      TF_ASSIGN_OR_RETURN(HloInstruction * new_reshape,
-                          MakeReshapeHlo(reduce->shape(), new_reduce));
-      return ReplaceInstruction(reduce, new_reshape);
+      int64_t reduce_rank = reduce->shape().rank();
+      int64_t arg_operand0_rank = arg->operand(0)->shape().rank();
+      int64_t new_reduce_dims_size = new_reduce_dims.size();
+      int64_t new_reduce_rank = arg_operand0_rank - new_reduce_dims_size;
+      // Skip if 1D reduce is replaced with ND reduce
+      if (!(reduce_rank == 1 && new_reduce_rank > 1)) {
+        TF_ASSIGN_OR_RETURN(
+            HloInstruction * new_reduce,
+            MakeReduceHlo(arg->mutable_operand(0), init_value, new_reduce_dims,
+                          reduce->to_apply(), &reduce->metadata()));
+        TF_ASSIGN_OR_RETURN(HloInstruction * new_reshape,
+                            MakeReshapeHlo(reduce->shape(), new_reduce));
+        return ReplaceInstruction(reduce, new_reshape);
+      }
     }
   }
 
