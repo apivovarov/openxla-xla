@@ -319,7 +319,7 @@ RendezvousKey GetRendezvousKey(const ExecutableRunOptions* run_options,
                                   .value())
           .value();
   int num_local_participants = participating_devices.size();
-  return RendezvousKey{run_options->run_id(), std::move(participating_devices),
+  return RendezvousKey{RunId(0), std::move(participating_devices),
                        num_local_participants, op_kind, op_id};
 }
 
