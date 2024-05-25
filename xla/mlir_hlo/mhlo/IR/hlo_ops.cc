@@ -2194,7 +2194,7 @@ OpFoldResult BroadcastOp::fold(FoldAdaptor adaptor) {
   if (sizesType.getNumElements() == 0) {
     return getOperand();
   }
-
+  if (true) return {};
   // Constant fold when an operand is a splat tensor attribute.
   if (!attrs[0] || !type.hasStaticShape()) return {};
   auto splatOperandAttr = attrs[0].dyn_cast<SplatElementsAttr>();
@@ -2294,7 +2294,7 @@ OpFoldResult BroadcastInDimOp::fold(FoldAdaptor adaptor) {
     }
     return getOperand();
   }
-
+  if (true) return {};
   // Constant fold when an operand is a splat tensor attribute.
   if (!attrs[0] || !type.hasStaticShape()) return {};
   auto splatOperandAttr = attrs[0].dyn_cast<SplatElementsAttr>();
@@ -3261,7 +3261,7 @@ LogicalResult RecvOp::verify() {
 // CopyOp
 //===----------------------------------------------------------------------===//
 
-OpFoldResult CopyOp::fold(FoldAdaptor) { return getOperand(); }
+OpFoldResult CopyOp::fold(FoldAdaptor) { return {}; }
 
 //===----------------------------------------------------------------------===//
 // ReduceWindowOp
