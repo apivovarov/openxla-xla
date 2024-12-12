@@ -204,5 +204,90 @@ f32[2,2] {
 })"));
 }
 
+xla::Shape ReplaceElementType(const xla::Shape& shape,
+                              xla::PrimitiveType old_type,
+                              xla::PrimitiveType new_type) {
+  if (shape.element_type() == old_type) {
+    return ShapeUtil::ChangeElementType(shape, new_type);
+  } else if (shape.element_type() == TUPLE) {
+    std::vector<Shape> new_tshapes;
+    new_tshapes.reserve(shape.tuple_shapes_size());
+    bool changed = false;
+    for (const Shape& tshape : shape.tuple_shapes()) {
+      Shape new_tshape = ReplaceElementType(tshape, old_type, new_type);
+      if (tshape != new_tshape) {
+        new_tshapes.push_back(std::move(new_tshape));
+        changed = true;
+      } else {
+        new_tshapes.push_back(tshape);
+      }
+    }
+    if (changed) return ShapeUtil::MakeTupleShape(std::move(new_tshapes));
+  }
+  return shape;  // Return unchanged if the type doesn't match
+}
+
+void UpdateEntryComputationLayout(xla::ComputationLayout* layout,
+                                  xla::PrimitiveType old_type,
+                                  xla::PrimitiveType new_type) {
+  // Update parameter shapes
+  for (int i = 0; i < layout->parameter_count(); ++i) {
+    *layout->mutable_parameter_layout(i) = ShapeLayout(
+        ReplaceElementType(layout->parameter_shape(i), old_type, new_type));
+  }
+  // Update result shape
+  *layout->mutable_result_layout() = ShapeLayout(
+      ReplaceElementType(layout->result_shape(), old_type, new_type));
+}
+
+TEST_F(RunHloModuleTest, Convert_e4m3fn) {
+  TF_ASSERT_OK_AND_ASSIGN(std::unique_ptr<HloModule> module,
+                          ParseAndReturnUnverifiedModule(R"(
+HloModule m
+
+func2 {
+  p0 = f8e4m3fn[4,4]{1,0} parameter(0)
+  p1 = f8e4m3fn[4,4]{1,0} parameter(1)
+  ROOT add2 = f8e4m3fn[4,4]{1,0} add(p0, p1)
+}
+
+ENTRY main {
+  ptt0 = ((f8e4m3fn[4,4], f8e4m3fn[4,4]), f8e4m3fn[4,4]) parameter(0)
+  pt0 = (f8e4m3fn[4,4], f8e4m3fn[4,4]) get-tuple-element(ptt0), index=0
+  p0 = f8e4m3fn[4,4] get-tuple-element(pt0), index=0
+  p1 = f8e4m3fn[4,4]{1,0} parameter(1)
+  call8 = f8e4m3fn[4,4] call(f8e4m3fn[4,4] p0, f8e4m3fn[4,4] p1), to_apply=%func2, is_composite=true
+  co.1 = f8e4m3fn[4,4]{1,0} constant({{2,5,3,1},{2,5,3,1},{2,5,3,1},{2,5,3,1}})
+  add2 = f8e4m3fn[4,4]{1,0} add(p0, p1)
+  add3 = f8e4m3fn[4,4]{1,0} add(p0, co.1)
+  t3 = (f8e4m3fn[4,4], f8e4m3fn[4,4]) tuple(add2, add3)
+  el0.4 = f8e4m3fn[4,4] get-tuple-element(t3), index=0
+  add4 = f8e4m3fn[4,4]{1,0} add(p0, el0.4)
+  el1.4 = f8e4m3fn[4,4] get-tuple-element(t3), index=1
+  add5 = f8e4m3fn[4,4]{1,0} add(el0.4, el1.4)
+  t6 = (f8e4m3fn[4,4], f8e4m3fn[4,4]) tuple(add4, call8)
+  ROOT t7 = ((f8e4m3fn[4,4], f8e4m3fn[4,4]), f8e4m3fn[4,4]) tuple(t6, add5)
+})"));
+
+  std::cerr << "Module name: " << module->name() << std::endl;
+
+  PrimitiveType old_type = PrimitiveType::F8E4M3FN;
+  PrimitiveType new_type = PrimitiveType::F8E4M3;
+
+  UpdateEntryComputationLayout(module->mutable_entry_computation_layout(),
+                               old_type, new_type);
+
+  for (HloComputation* computation : module->computations()) {
+    for (HloInstruction* instruction : computation->instructions()) {
+      *instruction->mutable_shape() =
+          ReplaceElementType(instruction->shape(), old_type, new_type);
+    }
+  }
+
+  std::string modified_hlo = module->ToString();
+  std::cerr << "==== Modified HLO: ====" << std::endl;
+  std::cout << modified_hlo << std::endl;
+}
+
 }  // namespace
 }  // namespace xla
